@@ -1,16 +1,18 @@
-import React, { useState, useEffect } from "react";
+import React, { useState, useEffect, useContext } from "react";
 import { useNavigate } from "react-router-dom";
 import assets from "../assets/assets";
+import { AuthContext } from "../../context/AuthContext";
 
 const ProfilePage = () => {
+  const { authUser, updateProfile } = useContext(AuthContext);
+
   const [selectedImg, setSelectedImg] = useState(null);
   const [previewUrl, setPreviewUrl] = useState(null);
-  const [name, setName] = useState("Martin Johnson");
-  const [bio, setBio] = useState("");
+  const [name, setName] = useState(authUser?.fullname || "");
+  const [bio, setBio] = useState(authUser?.bio || "");
   const [loading, setLoading] = useState(false);
   const navigate = useNavigate();
 
-  // Clean up preview URL on change/unmount
   useEffect(() => {
     if (!selectedImg) return;
     const objectUrl = URL.createObjectURL(selectedImg);
@@ -22,26 +24,22 @@ const ProfilePage = () => {
     e.preventDefault();
     setLoading(true);
 
-    const formData = new FormData();
-    formData.append("name", name);
-    formData.append("bio", bio);
-    if (selectedImg) formData.append("avatar", selectedImg);
-
     try {
-      const res = await fetch("/api/profile", {
-        method: "POST",
-        body: formData,
-      });
-
-      const data = await res.json();
-      if (res.ok) {
-        alert("Profile saved successfully!");
+      if (!selectedImg) {
+        await updateProfile({ fullname: name, bio });
         navigate("/");
-      } else {
-        alert("Error: " + data.message);
+        return;
       }
+
+      const reader = new FileReader();
+      reader.readAsDataURL(selectedImg);
+      reader.onloadend = async () => {
+        const base64Image = reader.result;
+        await updateProfile({ profilePic: base64Image, fullname: name, bio });
+        navigate("/");
+      };
     } catch (err) {
-      console.error("Network error:", err);
+      console.error("Error updating profile:", err);
       alert("Something went wrong!");
     } finally {
       setLoading(false);
@@ -71,10 +69,10 @@ const ProfilePage = () => {
               onChange={(e) => setSelectedImg(e.target.files[0])}
             />
             <img
-              src={previewUrl || assets.avatar_icon}
+              src={previewUrl || authUser?.profilePic || assets?.avatar_icon}
               alt="avatar preview"
               className={`w-12 h-12 object-cover ${
-                previewUrl && "rounded-full"
+                previewUrl ? "rounded-full" : ""
               }`}
             />
             <span>Upload profile image</span>
@@ -110,11 +108,11 @@ const ProfilePage = () => {
           </button>
         </form>
 
-        {/* Logo */}
+        {/* Logo or Profile Pic */}
         <img
-          src={assets.logo_icon}
-          alt="logo"
-          className="w-24 max-sm:w-16 max-sm:mt-6"
+          className="max-w-44 aspect-square rounded-full mx-10"
+          src={authUser?.profilePic || assets?.logo_icon}
+          alt="User"
         />
       </div>
     </div>

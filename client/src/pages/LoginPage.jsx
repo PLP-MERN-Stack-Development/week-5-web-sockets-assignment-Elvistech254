@@ -1,5 +1,7 @@
-import React, { useState } from "react";
+import React, { useState, useContext } from "react";
 import assets from "../assets/assets";
+import { AuthContext } from "../../context/AuthContext";
+import { useNavigate } from "react-router-dom";
 
 const LoginPage = () => {
   const [currState, setCurrState] = useState("Sign up");
@@ -7,25 +9,33 @@ const LoginPage = () => {
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [bio, setBio] = useState("");
-  const [isDataSubmitted, setIsDataSubmitted] = useState(false); // should be boolean
+  const [isDataSubmitted, setIsDataSubmitted] = useState(false);
 
-  const handleSubmit = (e) => {
-    e.preventDefault();
+  const { login } = useContext(AuthContext);
+
+  const navigate = useNavigate();
+
+  const onSubmitHandler = async (event) => {
+    event.preventDefault();
+
     if (currState === "Sign up" && !isDataSubmitted) {
-      setIsDataSubmitted(true); // move to bio step
-    } else {
-      // Final submit (sign up or login)
-      console.log({
-        FullName,
-        email,
-        password,
-        bio,
-      });
+      setIsDataSubmitted(true);
+      return;
     }
+
+    const payload =
+      currState === "Sign up"
+        ? { FullName, email, password, bio }
+        : { email, password };
+
+    await login(currState === "Sign up" ? "signup" : "login", payload);
+
+    // 🔀 Redirect to chat page (or dashboard)
+    navigate("/chat"); // ← You can change this route as needed
   };
+  // Toggle between Sign Up and Login
 
   const toggleState = () => {
-    // Reset form when switching between Sign up/Login
     setCurrState(currState === "Sign up" ? "Login" : "Sign up");
     setFullName("");
     setEmail("");
@@ -44,7 +54,7 @@ const LoginPage = () => {
 
       {/* Right */}
       <form
-        onSubmit={handleSubmit}
+        onSubmit={onSubmitHandler}
         className="border-2 bg-white/8 text-white border-gray-500 p-6 
         flex flex-col gap-6 rounded-lg shadow-lg"
       >
@@ -53,7 +63,7 @@ const LoginPage = () => {
           <img src={assets.arrow_icon} alt="" className="w-5 cursor-pointer" />
         </h2>
 
-        {/* Sign up Full Name */}
+        {/* Full Name (Sign Up Step 1) */}
         {currState === "Sign up" && !isDataSubmitted && (
           <input
             onChange={(e) => setFullName(e.target.value)}
@@ -65,7 +75,7 @@ const LoginPage = () => {
           />
         )}
 
-        {/* Shared Email and Password */}
+        {/* Shared Email and Password Fields */}
         {!isDataSubmitted && (
           <>
             <input
@@ -89,7 +99,7 @@ const LoginPage = () => {
           </>
         )}
 
-        {/* Sign up Bio */}
+        {/* Bio (Sign Up Step 2) */}
         {currState === "Sign up" && isDataSubmitted && (
           <textarea
             onChange={(e) => setBio(e.target.value)}
@@ -102,6 +112,7 @@ const LoginPage = () => {
           ></textarea>
         )}
 
+        {/* Submit */}
         <button
           type="submit"
           className="py-3 bg-gradient-to-r from-purple-400
@@ -114,12 +125,13 @@ const LoginPage = () => {
             : "Login Now"}
         </button>
 
+        {/* Terms Checkbox */}
         <label className="flex gap-2 items-center text-sm">
           <input type="checkbox" required />
           <span>Agree to the terms of use and Privacy.</span>
         </label>
 
-        {/* Move toggle inside the form */}
+        {/* Switch Mode */}
         <div className="text-sm text-gray-300 mt-2 text-center">
           {currState === "Sign up" ? (
             <p>
